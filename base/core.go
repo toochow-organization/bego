@@ -18,9 +18,9 @@ import (
 	mux "github.com/go-chi/chi/v5"
 	middleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	grpcvalidator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
+	grpcRecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpcRetry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpcValidator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/toochow-organization/bego/base/config"
 	"github.com/toochow-organization/bego/base/errors"
@@ -32,13 +32,13 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// Boilerplate provides a set of common base code for creating a production ready GRPC server and
+// Core provides a set of common base code for creating a production ready GRPC server and
 // HTTP mux router (with grpc-gateway capabilities) and custom HTTP endpoints
-type Boilerplate struct {
+type Core struct {
 	// Base component's name
 	name string
 	// Options
-	opts *BoilerplateOptions
+	opts *CoreOptions
 	// logger
 	logger *log.Logger
 	// Runtime (grpc-gateway)
@@ -62,11 +62,11 @@ var defaultHealthHandler = func(writer http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintln(writer, "ok") //nolint
 }
 
-func NewBoilerPlate(name string, opts ...func(*BoilerplateOptions)) (*Boilerplate, error) {
+func NewCore(name string, opts ...func(*CoreOptions)) (*Core, error) {
 	if len(name) == 0 {
 		return nil, errors.New("name cannot be empty")
 	}
-	boilerplateOpts := &BoilerplateOptions{
+	CoreOpts := &CoreOptions{
 		httpAddr: config.LookupEnv("BEGO_HTTP_ADDR", "0.0.0.0:8080"),
 		grpcAddr: config.LookupEnv("BEGO_GRPC_ADDR", "0.0.0.0:8081"),
 		// By default, always 15 seconds timeout
@@ -75,19 +75,19 @@ func NewBoilerPlate(name string, opts ...func(*BoilerplateOptions)) (*Boilerplat
 		logger:           log.NewNop(),
 	}
 	for _, o := range opts {
-		o(boilerplateOpts)
+		o(CoreOpts)
 	}
 
-	return &Boilerplate{
+	return &Core{
 		name:      name,
-		opts:      boilerplateOpts,
-		logger:    boilerplateOpts.logger,
+		opts:      CoreOpts,
+		logger:    CoreOpts.logger,
 		readiness: defaultHealthHandler,
 		liveness:  defaultHealthHandler,
 	}, nil
 }
 
-func (b *Boilerplate) initHTTPOnce() {
+func (b *Core) initHTTPOnce() {
 	// make sure the HTTP server has been initialized
 	b.httpInstance.Do(func() {
 		router := mux.NewRouter()
@@ -114,7 +114,7 @@ func (b *Boilerplate) initHTTPOnce() {
 type RegisterServiceFunc func(s *grpc.Server)
 
 // RegisterService registers a grpc service handler.
-func (b *Boilerplate) RegisterService(fn RegisterServiceFunc) {
+func (b *Core) RegisterService(fn RegisterServiceFunc) {
 	// Create GRPC server only once
 	b.grpcInstance.Do(func() {
 		b.grpcServer = b.newGrpcSever(b.opts.grpcServerOpts...)
@@ -122,19 +122,19 @@ func (b *Boilerplate) RegisterService(fn RegisterServiceFunc) {
 	fn(b.grpcServer)
 }
 
-func (b *Boilerplate) newGrpcSever(opts ...grpc.ServerOption) *grpc.Server {
-	// Create a default server opts and set our default chain of interceptor
-	// if user decide to pass a custom interceptor via `grpc.ChainXXXInterceptor` or grpc.XXXInterceptor,
-	// it should be added at the end of the call chain since
-	// interpreter call chain is from left to right.
+// newGrpcSever creates a new gRPC server with the provided options.
+// It applies stream and unary interceptors for recovery and validation.
+// Additional server options can be passed as variadic arguments.
+// Returns the created gRPC server.
+func (b *Core) newGrpcSever(opts ...grpc.ServerOption) *grpc.Server {
 	serverOpts := []grpc.ServerOption{
 		grpc.ChainStreamInterceptor(
-			grpcrecovery.StreamServerInterceptor(grpcrecovery.WithRecoveryHandlerContext(recoverFrom(log.L()))),
-			grpcvalidator.StreamServerInterceptor(),
+			grpcRecovery.StreamServerInterceptor(grpcRecovery.WithRecoveryHandlerContext(recoverFrom(log.L()))),
+			grpcValidator.StreamServerInterceptor(),
 		),
 		grpc.ChainUnaryInterceptor(
-			grpcrecovery.UnaryServerInterceptor(grpcrecovery.WithRecoveryHandlerContext(recoverFrom(log.L()))),
-			grpcvalidator.UnaryServerInterceptor(),
+			grpcRecovery.UnaryServerInterceptor(grpcRecovery.WithRecoveryHandlerContext(recoverFrom(log.L()))),
+			grpcValidator.UnaryServerInterceptor(),
 		),
 	}
 
@@ -142,21 +142,21 @@ func (b *Boilerplate) newGrpcSever(opts ...grpc.ServerOption) *grpc.Server {
 	return grpc.NewServer(serverOpts...)
 }
 
-func recoverFrom(l *log.Logger) grpcrecovery.RecoveryHandlerFuncContext {
+func recoverFrom(l *log.Logger) grpcRecovery.RecoveryHandlerFuncContext {
 	return func(ctx context.Context, p interface{}) error {
 		l.Error(ctx, "grpc recover panic", zap.Any("panic", p))
 		return status.Errorf(codes.Internal, "%v", p)
 	}
 }
 
-func (b *Boilerplate) newGrprClient() (*grpc.ClientConn, error) {
+func (b *Core) newGrprClient() (*grpc.ClientConn, error) {
 	dialOps := []grpc.DialOption{
 		grpc.WithChainUnaryInterceptor(
-			grpcretry.UnaryClientInterceptor(),
-			grpcvalidator.UnaryClientInterceptor(),
+			grpcRetry.UnaryClientInterceptor(),
+			grpcValidator.UnaryClientInterceptor(),
 		),
 		grpc.WithChainStreamInterceptor(
-			grpcretry.StreamClientInterceptor(),
+			grpcRetry.StreamClientInterceptor(),
 		),
 	}
 	// We can add more grpc dial options here
@@ -168,7 +168,7 @@ func (b *Boilerplate) newGrprClient() (*grpc.ClientConn, error) {
 	return grpc.Dial(b.opts.grpcAddr, dialOps...)
 }
 
-func (b *Boilerplate) initRuntimeOnce(muxOpts ...runtime.ServeMuxOption) {
+func (b *Core) initRuntimeOnce(muxOpts ...runtime.ServeMuxOption) {
 	b.runtimeInstance.Do(func() {
 		b.logger.Info(context.Background(), "initializing grpc-gateway")
 
@@ -199,7 +199,7 @@ type RegisterServiceHandlerFunc func(gw *runtime.ServeMux, conn *grpc.ClientConn
 
 // RegisterServiceHandler registers a grpc-gateway service handler.
 // Reference: https://github.com/grpc-ecosystem/grpc-gateway
-func (b *Boilerplate) RegisterServiceHandler(fn RegisterServiceHandlerFunc, muxOpts ...runtime.ServeMuxOption) {
+func (b *Core) RegisterServiceHandler(fn RegisterServiceHandlerFunc, muxOpts ...runtime.ServeMuxOption) {
 	b.initHTTPOnce()
 	// Only create one time the gateway and grpc client
 	b.initRuntimeOnce(muxOpts...)
@@ -207,7 +207,7 @@ func (b *Boilerplate) RegisterServiceHandler(fn RegisterServiceHandlerFunc, muxO
 }
 
 // Start serving request via HTTP and GRPC
-func (b *Boilerplate) Start() error {
+func (b *Core) Start() error {
 	// Package maxprocs lets Go programs easily configure runtime.GOMAXPROCS to match the configured Linux CPU quota.
 	// Unlike the top-level automaxprocs package,
 	// it lets the caller configure logging and handle errors.
