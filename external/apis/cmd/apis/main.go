@@ -30,7 +30,7 @@ func main() {
 	log.ReplaceGlobal(l)
 
 	// Initialise the boilerplate and start the service
-	boilerplate, err := base.NewBoilerPlate(serviceName, base.WithLogger(l))
+	core, err := base.NewCore(serviceName, base.WithLogger(l))
 	if err != nil {
 		l.Fatal(ctx, err.Error())
 	}
@@ -40,19 +40,19 @@ func main() {
 	srv := newHandler(svc)
 
 	// Register the GRPC Server
-	boilerplate.RegisterService(func(s *grpc.Server) {
+	core.RegisterService(func(s *grpc.Server) {
 		pb.RegisterApiServiceServer(s, srv)
 	})
 
 	// Register the Service Handler
-	boilerplate.RegisterServiceHandler(func(gw *runtime.ServeMux, conn *grpc.ClientConn) {
+	core.RegisterServiceHandler(func(gw *runtime.ServeMux, conn *grpc.ClientConn) {
 		if err := pb.RegisterApiServiceHandler(ctx, gw, conn); err != nil {
 			l.Fatal(ctx, "fail registering gateway handler", log.Error(err))
 		}
 	})
 
 	l.Info(ctx, "Starting service", log.String("service.name", serviceName))
-	if err := boilerplate.Start(); err != nil {
+	if err := core.Start(); err != nil {
 		l.Error(ctx, "fail starting", log.Error(err))
 	}
 }
