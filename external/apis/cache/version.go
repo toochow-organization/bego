@@ -13,8 +13,10 @@ type VersionStorage struct {
 	l *log.Logger
 }
 
-func NewVersionStorage() *VersionStorage {
-	return &VersionStorage{}
+func NewVersionStorage(l *log.Logger) *VersionStorage {
+	return &VersionStorage{
+		l: l,
+	}
 }
 
 // GetVersion

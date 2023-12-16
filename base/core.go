@@ -49,8 +49,10 @@ type Core struct {
 	grpcServer   *grpc.Server
 	grpcInstance sync.Once
 	// HTTP server
-	liveness     http.HandlerFunc
-	readiness    http.HandlerFunc
+	liveness  http.HandlerFunc
+	readiness http.HandlerFunc
+	// HTTP Status Addr
+	statusAddr   string
 	httpServer   *http.Server
 	httpHandler  *mux.Mux
 	httpInstance sync.Once
@@ -67,8 +69,9 @@ func NewCore(name string, opts ...func(*CoreOptions)) (*Core, error) {
 		return nil, errors.New("name cannot be empty")
 	}
 	CoreOpts := &CoreOptions{
-		httpAddr: config.LookupEnv("BEGO_HTTP_ADDR", "0.0.0.0:8080"),
-		grpcAddr: config.LookupEnv("BEGO_GRPC_ADDR", "0.0.0.0:8081"),
+		httpAddr:   config.LookupEnv("BEGO_HTTP_ADDR", "0.0.0.0:8080"),
+		grpcAddr:   config.LookupEnv("BEGO_GRPC_ADDR", "0.0.0.0:8081"),
+		statusAddr: config.LookupEnv("BEGO_STATUS_ADDR", ":9091"),
 		// By default, always 15 seconds timeout
 		httpWriteTimeout: 15 * time.Second,
 		httpReadTimeout:  15 * time.Second,
@@ -79,11 +82,12 @@ func NewCore(name string, opts ...func(*CoreOptions)) (*Core, error) {
 	}
 
 	return &Core{
-		name:      name,
-		opts:      CoreOpts,
-		logger:    CoreOpts.logger,
-		readiness: defaultHealthHandler,
-		liveness:  defaultHealthHandler,
+		name:       name,
+		opts:       CoreOpts,
+		logger:     CoreOpts.logger,
+		readiness:  defaultHealthHandler,
+		liveness:   defaultHealthHandler,
+		statusAddr: CoreOpts.statusAddr,
 	}, nil
 }
 
@@ -217,10 +221,7 @@ func (b *Core) Start() error {
 	if err != nil {
 		return errors.Wrap(err, "setup maxprocs")
 	}
-	r := mux.NewRouter()
-	// Init default health checks.
-	r.Method("GET", "/healthz", b.liveness)
-	r.Method("GET", "/readyz", b.readiness)
+	b.serviceStatus()
 	// shutdown channel to listen for an interrupt or terminate signal from the OS.
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
@@ -278,4 +279,30 @@ func (b *Core) Start() error {
 	}
 
 	return nil
+}
+
+// serviceStatus initializes the service status endpoints for liveness and readiness checks.
+// It creates a new router, sets up the default health checks, and starts an HTTP server to handle the requests.
+// The server listens on port 9091 and has a read timeout of 15 seconds.
+// Any errors encountered during server startup are logged using the logger.
+func (b *Core) serviceStatus() {
+	r := mux.NewRouter()
+	// Init default health checks.
+	r.Method("GET", "/healthz", b.liveness)
+	r.Method("GET", "/readyz", b.readiness)
+
+	b.logger.Debug(context.Background(), "starting probe server", log.String("addr", b.statusAddr))
+
+	// create http server with options
+	httpServer := http.Server{
+		Addr:        b.statusAddr,
+		Handler:     r,
+		ReadTimeout: 15 * time.Second,
+	}
+
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil {
+			b.logger.Debug(context.TODO(), "fail to start probe server", log.Error(err))
+		}
+	}()
 }

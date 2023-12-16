@@ -3,7 +3,7 @@ package apis
 import "context"
 
 type VersionService struct {
-	storage VersionStorage
+	cache VersionStorage
 }
 
 // VersionStorage
@@ -16,13 +16,13 @@ type VersionStorage interface {
 	GetVersion(ctx context.Context) string
 }
 
-func NewVersionService(storage VersionStorage) VersionService {
-	return VersionService{storage: storage}
+func NewVersionService(cache VersionStorage) VersionService {
+	return VersionService{cache: cache}
 }
 
 // GetVersion
 //
 // Business logic for GetVersion
 func (s *VersionService) GetVersion(ctx context.Context) string {
-	return s.storage.GetVersion(ctx)
+	return s.cache.GetVersion(ctx)
 }

@@ -1,0 +1,14 @@
+load('ext://ko', 'ko_build')
+
+ko_build(
+    'local/external/apis',
+    './cmd/apis',
+    deps = ['../../protocol/', '../../base/', '../../vendor/', './', '../../go.mod', '../../go.sum'],
+)
+
+k8s_resource('apis',
+    port_forwards=[
+        '8010: q', # service endpoints
+    ],
+    labels=["external"],
+)

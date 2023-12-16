@@ -1,0 +1,2 @@
+# Explain the files for `external` namespace
+- In this namespace, we define a Role and RoleBinding for each of the application. Detail explanation of the config can be found in [Kubernetes RBAC documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/). Noted that, with the current file, we bind a service Role to a service account in each namespace. This will allows us to further map the Kubernetes Service Account to Cloud Service account such as GCP
