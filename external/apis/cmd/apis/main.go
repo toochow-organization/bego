@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	apis "github.com/toochow-organization/bego/external/apis"
-	"github.com/toochow-organization/bego/external/apis/inmem"
+	cache "github.com/toochow-organization/bego/external/apis/cache"
 	pb "github.com/toochow-organization/bego/protocol/external/apis/v1"
 )
 
@@ -35,8 +35,8 @@ func main() {
 		l.Fatal(ctx, err.Error())
 	}
 	// Setup for version service (sample)
-	storage := inmem.NewVersionStorage()
-	svc := apis.NewVersionService(storage)
+	cache := cache.NewVersionStorage(l)
+	svc := apis.NewVersionService(cache)
 	srv := newHandler(svc)
 
 	// Register the GRPC Server

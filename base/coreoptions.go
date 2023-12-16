@@ -11,6 +11,7 @@ import (
 type CoreOptions struct {
 	httpAddr         string
 	grpcAddr         string
+	statusAddr       string
 	grpcServerOpts   []grpc.ServerOption
 	corsOpts         cors.Options
 	enableCors       bool
@@ -24,6 +25,12 @@ type Option func(*CoreOptions)
 func EnableCors() Option {
 	return func(co *CoreOptions) {
 		co.enableCors = true
+	}
+}
+
+func WithStatusAddr(addr string) Option {
+	return func(co *CoreOptions) {
+		co.statusAddr = addr
 	}
 }
 

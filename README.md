@@ -16,3 +16,7 @@ This works were inspired and referenced from
 ## PostgreSQL 
 - Can be access by pgadmin4, the user can be either `postgres` or `bego`, password: `password`
 
+
+## Troubleshooting
+- If you got some trouble with publishing image 
+`Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?` especially when running in Rancher-desktop, then execute `sudo ln -s ~$USER/.rd/docker.sock /var/run/docker.sock` to map the docker.sock to /var/run/
