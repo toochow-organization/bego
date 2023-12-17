@@ -6,6 +6,6 @@ services:
       - "5432:5432"
     command: ["postgres", "-c", "log_statement=all"]
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=secret
+      - POSTGRES_USER=bego
+      - POSTGRES_DB=bego
+      - POSTGRES_PASSWORD=password

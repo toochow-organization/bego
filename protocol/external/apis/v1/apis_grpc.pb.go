@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ApiServiceClient interface {
 	// Get version
-	GetVersion(ctx context.Context, in *GetVersionRequest, opts ...grpc.CallOption) (*GetVersionResponse, error)
+	ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error)
 }
 
 type apiServiceClient struct {
@@ -34,9 +34,9 @@ func NewApiServiceClient(cc grpc.ClientConnInterface) ApiServiceClient {
 	return &apiServiceClient{cc}
 }
 
-func (c *apiServiceClient) GetVersion(ctx context.Context, in *GetVersionRequest, opts ...grpc.CallOption) (*GetVersionResponse, error) {
-	out := new(GetVersionResponse)
-	err := c.cc.Invoke(ctx, "/ApiService/GetVersion", in, out, opts...)
+func (c *apiServiceClient) ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error) {
+	out := new(ListModelsResponse)
+	err := c.cc.Invoke(ctx, "/ApiService/ListModels", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (c *apiServiceClient) GetVersion(ctx context.Context, in *GetVersionRequest
 // for forward compatibility
 type ApiServiceServer interface {
 	// Get version
-	GetVersion(context.Context, *GetVersionRequest) (*GetVersionResponse, error)
+	ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error)
 	mustEmbedUnimplementedApiServiceServer()
 }
 
@@ -56,8 +56,8 @@ type ApiServiceServer interface {
 type UnimplementedApiServiceServer struct {
 }
 
-func (UnimplementedApiServiceServer) GetVersion(context.Context, *GetVersionRequest) (*GetVersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
+func (UnimplementedApiServiceServer) ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListModels not implemented")
 }
 func (UnimplementedApiServiceServer) mustEmbedUnimplementedApiServiceServer() {}
 
@@ -72,20 +72,20 @@ func RegisterApiServiceServer(s grpc.ServiceRegistrar, srv ApiServiceServer) {
 	s.RegisterService(&ApiService_ServiceDesc, srv)
 }
 
-func _ApiService_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetVersionRequest)
+func _ApiService_ListModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListModelsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ApiServiceServer).GetVersion(ctx, in)
+		return srv.(ApiServiceServer).ListModels(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ApiService/GetVersion",
+		FullMethod: "/ApiService/ListModels",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApiServiceServer).GetVersion(ctx, req.(*GetVersionRequest))
+		return srv.(ApiServiceServer).ListModels(ctx, req.(*ListModelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -98,8 +98,8 @@ var ApiService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ApiServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetVersion",
-			Handler:    _ApiService_GetVersion_Handler,
+			MethodName: "ListModels",
+			Handler:    _ApiService_ListModels_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

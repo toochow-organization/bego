@@ -8,3 +8,4 @@ resources:
   - ./postgres
   - ./namespaces
   - ../../external
+  - ./configmaps
