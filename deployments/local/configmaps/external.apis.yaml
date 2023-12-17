@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apis
+  namespace: external
+data: # this is the data that will be available in the ConfigMap
+  config.yaml: ""

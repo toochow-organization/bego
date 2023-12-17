@@ -61,6 +61,8 @@ func (m *ErrorInfo) validate(all bool) error {
 
 	// no validation rules for Metadata
 
+	// no validation rules for Code
+
 	if len(errors) > 0 {
 		return ErrorInfoMultiError(errors)
 	}

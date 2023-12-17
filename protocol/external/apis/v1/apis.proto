@@ -20,15 +20,20 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 
 service ApiService {
   // Get version
-  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse) {
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse) {
     option (google.api.http) = {
-      get: "/v1/version";
+      get: "/v1/models";
     };
   }
 }
 
-message GetVersionRequest {}
+message ListModelsRequest {}
 
-message GetVersionResponse {
-  string version = 1;
+message ListModelsResponse {
+  repeated Model models = 1;
+}
+
+message Model {
+  string id = 1;
+  string name = 2;
 }
